@@ -180,6 +180,252 @@ function generateExportText(state) {
   return L.join("\n");
 }
 
+// ===== PDF EXPORT =====
+function generatePdf(state, candidato, opts) {
+  opts = opts || {};
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: "pt", format: "a4" });
+  const W = 595, H = 842;
+  const ML = 50, MR = 50;
+  const CW = W - ML - MR;
+  const NAVY = [8, 14, 50];
+  const BLUE = [0, 85, 255];
+  const RED = [241, 96, 93];
+  const TEXT = [33, 38, 71];
+  const MUTED = [106, 114, 130];
+  const BORDER = [224, 224, 224];
+  const BG_SUBTLE = [244, 246, 250];
+
+  const submittedAt = opts.createdAt ? new Date(opts.createdAt) : new Date();
+  const propsById = Object.fromEntries(PROPERTIES.map((p) => [p.id, p]));
+  let y = 0;
+
+  function drawHeaderBand() {
+    doc.setFillColor.apply(doc, NAVY);
+    doc.rect(0, 0, W, 56, "F");
+    doc.setFillColor.apply(doc, RED);
+    doc.circle(W - MR - 6, 16, 3.5, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(13);
+    doc.text("Seazone", ML, 33);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.setTextColor(200, 210, 240);
+    doc.text("Desafio Prático · CS Onboarding", W - MR - 16, 33, { align: "right" });
+  }
+  function drawFooter(num, total) {
+    doc.setDrawColor.apply(doc, BORDER);
+    doc.setLineWidth(0.5);
+    doc.line(ML, H - 42, W - MR, H - 42);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    doc.setTextColor.apply(doc, MUTED);
+    doc.text("Processo Seletivo Seazone · 2026", ML, H - 26);
+    doc.text("Página " + num + " de " + total, W - MR, H - 26, { align: "right" });
+  }
+  function newPage() {
+    doc.addPage();
+    drawHeaderBand();
+    y = 96;
+  }
+  function ensure(h) {
+    if (y + h > H - 60) newPage();
+  }
+  function h1(t) {
+    ensure(46);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(26);
+    doc.setTextColor.apply(doc, NAVY);
+    doc.text(t, ML, y);
+    y += 32;
+  }
+  function h2(t) {
+    ensure(40);
+    y += 6;
+    doc.setFillColor.apply(doc, BLUE);
+    doc.rect(ML, y - 12, 3, 16, "F");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(15);
+    doc.setTextColor.apply(doc, NAVY);
+    doc.text(t, ML + 10, y);
+    y += 18;
+  }
+  function h3(t) {
+    ensure(22);
+    y += 4;
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(9);
+    doc.setTextColor.apply(doc, BLUE);
+    doc.text(t.toUpperCase(), ML, y);
+    y += 14;
+  }
+  function p(text, opts2) {
+    opts2 = opts2 || {};
+    const size = opts2.size || 10.5;
+    doc.setFont(opts2.mono ? "courier" : "helvetica", opts2.bold ? "bold" : "normal");
+    doc.setFontSize(size);
+    doc.setTextColor.apply(doc, opts2.color || TEXT);
+    const lines = doc.splitTextToSize(text, opts2.width || CW);
+    const lh = size * 1.45;
+    for (const line of lines) {
+      ensure(lh);
+      doc.text(line, opts2.x || ML, y);
+      y += lh;
+    }
+  }
+  function gap(h) { y += h || 14; }
+  function rule() {
+    ensure(20);
+    y += 4;
+    doc.setDrawColor.apply(doc, BORDER);
+    doc.setLineWidth(0.5);
+    doc.line(ML, y, W - MR, y);
+    y += 16;
+  }
+  function answerBlock(text) {
+    const trimmed = (text || "").trim();
+    const empty = !trimmed;
+    const displayText = empty ? "(não respondido)" : trimmed;
+    const size = 10.5;
+    const lh = size * 1.45;
+    const lines = doc.splitTextToSize(displayText, CW - 24);
+    const blockH = lines.length * lh + 24;
+    ensure(blockH);
+    doc.setFillColor.apply(doc, BG_SUBTLE);
+    doc.roundedRect(ML, y, CW, blockH, 6, 6, "F");
+    doc.setDrawColor.apply(doc, BORDER);
+    doc.setLineWidth(0.5);
+    doc.roundedRect(ML, y, CW, blockH, 6, 6, "S");
+    doc.setFont("helvetica", empty ? "italic" : "normal");
+    doc.setFontSize(size);
+    doc.setTextColor.apply(doc, empty ? MUTED : TEXT);
+    let cy = y + 18;
+    for (const line of lines) {
+      doc.text(line, ML + 12, cy);
+      cy += lh;
+    }
+    y += blockH + 12;
+  }
+  function priorityRow(rank, prop) {
+    const rowH = 36;
+    ensure(rowH + 6);
+    let badge;
+    if (rank === 1) badge = BLUE;
+    else if (rank === 2) badge = [129, 162, 255];
+    else if (rank === 3) badge = [200, 215, 248];
+    else badge = [220, 224, 234];
+    doc.setFillColor.apply(doc, badge);
+    doc.roundedRect(ML, y, 30, rowH, 4, 4, "F");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(14);
+    doc.setTextColor(rank <= 2 ? 255 : 24, rank <= 2 ? 255 : 30, rank <= 2 ? 255 : 70);
+    if (rank <= 2) doc.setTextColor(255, 255, 255);
+    else doc.setTextColor.apply(doc, NAVY);
+    doc.text(String(rank), ML + 15, y + 23, { align: "center" });
+
+    doc.setFont("courier", "bold");
+    doc.setFontSize(10);
+    doc.setTextColor.apply(doc, NAVY);
+    doc.text(prop.code, ML + 42, y + 14);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.setTextColor.apply(doc, MUTED);
+    doc.text(prop.city + " · " + prop.days + " dias · " + prop.stage, ML + 42, y + 28);
+    y += rowH + 8;
+  }
+
+  // ===== Render =====
+  drawHeaderBand();
+  y = 96;
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  doc.setTextColor.apply(doc, BLUE);
+  doc.text("PROCESSO SELETIVO · 2026", ML, y);
+  y += 22;
+
+  h1("Desafio Prático");
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(16);
+  doc.setTextColor.apply(doc, MUTED);
+  doc.text("Resposta de " + (candidato.nome || "(sem nome)"), ML, y);
+  y += 28;
+
+  // Candidato card
+  const cardH = 86;
+  doc.setFillColor.apply(doc, BG_SUBTLE);
+  doc.roundedRect(ML, y, CW, cardH, 8, 8, "F");
+  doc.setDrawColor.apply(doc, BORDER);
+  doc.setLineWidth(0.5);
+  doc.roundedRect(ML, y, CW, cardH, 8, 8, "S");
+
+  const colW = (CW - 32) / 3;
+  const labels = ["CANDIDATO", "E-MAIL", "ENVIADO EM"];
+  const values = [
+    candidato.nome || "—",
+    candidato.email || "—",
+    submittedAt.toLocaleString("pt-BR", { dateStyle: "long", timeStyle: "short" }),
+  ];
+  for (let i = 0; i < 3; i++) {
+    const cx = ML + 16 + colW * i;
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8);
+    doc.setTextColor.apply(doc, MUTED);
+    doc.text(labels[i], cx, y + 24);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11);
+    doc.setTextColor.apply(doc, NAVY);
+    const vLines = doc.splitTextToSize(values[i], colW - 8);
+    let vy = y + 44;
+    for (const vl of vLines.slice(0, 2)) {
+      doc.text(vl, cx, vy);
+      vy += 14;
+    }
+  }
+  y += cardH + 28;
+
+  // ===== Tarefa 1 =====
+  h2("Tarefa 01 — Priorização da fila");
+  h3("Ordem de prioridade");
+  state.t1.ordem.forEach((id, i) => {
+    const pr = propsById[id];
+    if (pr) priorityRow(i + 1, pr);
+  });
+  gap(6);
+  h3("Justificativa");
+  answerBlock(state.t1.justificativa);
+  rule();
+
+  // ===== Tarefa 2 =====
+  h2("Tarefa 02 — Comunicação de retenção");
+  h3("Resposta ao João Mendes (WhatsApp)");
+  answerBlock(state.t2.mensagem);
+  rule();
+
+  // ===== Tarefa 3 =====
+  h2("Tarefa 03 — Conflito interno sob pressão");
+  h3("Mensagem para a Carla (cliente)");
+  answerBlock(state.t3.mensagem_proprietario);
+  gap(4);
+  h3("Mensagem para Operação (interno)");
+  answerBlock(state.t3.mensagem_operacao);
+
+  // Footers on all pages
+  const total = doc.internal.getNumberOfPages();
+  for (let i = 1; i <= total; i++) {
+    doc.setPage(i);
+    drawFooter(i, total);
+  }
+
+  return doc.output("blob");
+}
+
+function pdfFilename(nome) {
+  const safe = (nome || "candidato").trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "candidato";
+  return "desafio-cs-onboarding-" + safe + ".pdf";
+}
+
 // ===== TASKS =====
 function Task1Priorizacao({ value, onChange }) {
   const ordem = value.ordem;
@@ -592,14 +838,16 @@ function ExportModal({ state, text, candidato, canSubmit, onClose }) {
     catch (e) { alert("Não consegui copiar automaticamente. Selecione e copie o texto manualmente."); }
   };
 
-  const safeFileBase = (candidato.nome || "candidato").trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "candidato";
-
   const handleDownload = () => {
-    const blob = new Blob([text], { type: "text/markdown;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url; a.download = "desafio-cs-onboarding-" + safeFileBase + ".md";
-    document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+    try {
+      const blob = generatePdf(state, candidato);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = pdfFilename(candidato.nome);
+      document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+    } catch (e) {
+      alert("Não foi possível gerar o PDF: " + (e && e.message ? e.message : "erro desconhecido"));
+    }
   };
 
   const handleSubmit = async () => {
@@ -650,7 +898,7 @@ function ExportModal({ state, text, candidato, canSubmit, onClose }) {
         </div>
         <div className="modal-foot">
           <button className="btn btn-ghost" onClick={onClose}>Voltar</button>
-          <button className="btn" onClick={handleDownload}>Baixar .md</button>
+          <button className="btn" onClick={handleDownload}>Baixar PDF</button>
           <button className="btn" onClick={handleCopy}>{copied ? "Copiado ✓" : "Copiar"}</button>
           {!sentId && (
             <button className="btn btn-primary" onClick={handleSubmit} disabled={sending || !canSubmit}>
@@ -750,12 +998,19 @@ function AdminDashboard({ session }) {
   };
 
   const onDownload = (row) => {
-    const safe = (row.candidato_nome || "candidato").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "candidato";
-    const blob = new Blob([row.resumo_md || ""], { type: "text/markdown;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url; a.download = "resposta-" + safe + "-" + row.id.slice(0,8) + ".md";
-    document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+    try {
+      const blob = generatePdf(
+        row.payload || {},
+        { nome: row.candidato_nome, email: row.candidato_email },
+        { createdAt: row.created_at }
+      );
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = pdfFilename(row.candidato_nome);
+      document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+    } catch (e) {
+      alert("Falha ao gerar PDF: " + (e && e.message ? e.message : "erro"));
+    }
   };
 
   const signOut = async () => { await sb.auth.signOut(); };
@@ -854,6 +1109,7 @@ ${EXTRA_CSS}
 <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
 <script crossorigin src="https://unpkg.com/@babel/standalone@7.24.7/babel.min.js"></script>
 <script crossorigin src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script crossorigin src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
 
 <script type="text/babel" data-presets="react">
 ${finalApp}
