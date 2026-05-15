@@ -1,0 +1,9 @@
+# Build inputs / extraction scripts — not for the public repo
+setup_db.js
+extract_template.js
+extract_asset.js
+list_assets.js
+asset_*.js
+asset_*.svg
+asset_*.bin
+template_decoded.html
