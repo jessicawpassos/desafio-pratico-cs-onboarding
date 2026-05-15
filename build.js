@@ -264,7 +264,7 @@ function Task1Priorizacao({ value, onChange }) {
           <textarea
             className="answer"
             maxLength={5000}
-            placeholder="Ex.: Comecei pelo GAR porque é o de maior risco — proprietário com reclamação aberta e 65 dias sem ativação. Em seguida..."
+            placeholder=""
             value={value.justificativa}
             onChange={(e) => onChange({ ...value, justificativa: e.target.value })}
           />
@@ -321,7 +321,7 @@ function Task2Retencao({ value, onChange }) {
           <div className="wa-input-area">
             <textarea
               maxLength={5000}
-              placeholder="Olá, João. Obrigada pela sua honestidade — entendo a frustração..."
+              placeholder=""
               value={value.mensagem}
               onChange={(e) => onChange({ ...value, mensagem: e.target.value })}
             />
@@ -387,7 +387,7 @@ function Task3Conflito({ value, onChange }) {
             <div className="channel-body">
               <textarea
                 maxLength={5000}
-                placeholder="Bom dia, Carla. Recebi sua mensagem e..."
+                placeholder=""
                 value={value.mensagem_proprietario}
                 onChange={(e) => onChange({ ...value, mensagem_proprietario: e.target.value })}
               />
@@ -405,7 +405,7 @@ function Task3Conflito({ value, onChange }) {
             <div className="channel-body">
               <textarea
                 maxLength={5000}
-                placeholder="Pessoal, preciso de status das 6 unidades da Carla. Contexto: ..."
+                placeholder=""
                 value={value.mensagem_operacao}
                 onChange={(e) => onChange({ ...value, mensagem_operacao: e.target.value })}
               />
